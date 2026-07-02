@@ -73,8 +73,19 @@ RUN apt update \
         ros-jazzy-ros-gz \
         ros-jazzy-gz-sim-vendor \
         ros-jazzy-gz-math-vendor \
-        libfshydrodynamics=1.4.0 \
  && apt clean
+
+#Added because of the broken PPA and old FSH version
+RUN git clone https://github.com/hamilton8415/FreeSurfaceHydrodynamics.git /tmp/fsh_src \
+ && cd /tmp/fsh_src \
+ && git checkout TestBeta \
+ && mkdir -p build \
+ && cd build \
+ && cmake .. -DCMAKE_INSTALL_PREFIX=/opt/FreeSurfaceHydrodynamics \
+ && make -j$(nproc) \
+ && make install \
+ && ldconfig \
+ && rm -rf /tmp/fsh_src
 
 # For timing in tests, need to use cyclonedds for ROS 2 rather than default
 # rmw provider
