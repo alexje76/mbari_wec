@@ -27,6 +27,7 @@ RUN apt update \
  && apt install -y \
         apt-utils \
         build-essential \
+        ca-certificates \
         cmake \
         cppcheck \
         curl \
@@ -36,7 +37,9 @@ RUN apt update \
         gnupg2 \
         locales \
         lsb-release \
+        python3-dev \
         python3-pip \
+        software-properties-common \
         sudo \
         vim \
         wget \
