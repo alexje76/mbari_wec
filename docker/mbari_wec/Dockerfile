@@ -52,11 +52,6 @@ RUN ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastruc
  && curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo $VERSION_CODENAME)_all.deb" # If using Ubuntu derivates use $UBUNTU_CODENAME
 RUN dpkg -i /tmp/ros2-apt-source.deb
 
-# ppa for libfshydrodynamics free surface hydrodynamics dependency until
-# alternative in this PR: https://github.com/osrf/mbari_wec_gz/pull/138
-RUN curl -s --compressed "https://hamilton8415.github.io/ppa/KEY.gpg" | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/ppa.gpg >/dev/null \
- && sudo curl -s --compressed -o /etc/apt/sources.list.d/my_list_file.list "https://hamilton8415.github.io/ppa/my_list_file.list"
-
 # Install ROS 2 Jazzy and Gazebo Harmonic (from ros-gz)
 RUN apt update \
  && apt install -y \
