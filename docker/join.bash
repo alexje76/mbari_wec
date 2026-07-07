@@ -16,15 +16,13 @@
 # limitations under the License.
 #
 #
-# Typical usage: ./join.bash <container_name>
+# Typical usage: ./join.bash <image_name.sif>
 #
 
-IMG=$(basename $1)
-# Use quotes if image name contains symbols like a forward slash /, but then
-# cannot use `basename`.
-#IMG="$1"
+INSTANCE_NAME=$(basename "$1" .sif)
 
 xhost +
-containerid=$(docker ps -aqf "ancestor=${IMG}")
-docker exec --privileged -e DISPLAY=${DISPLAY} -e LINES=`tput lines` -it ${containerid} bash
+apptainer shell \
+  --env DISPLAY=${DISPLAY} \
+  instance://${INSTANCE_NAME}
 xhost -

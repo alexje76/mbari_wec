@@ -17,34 +17,35 @@
 #
 #
 
-# Runs a docker container with the image created by build.bash
+# Runs an Apptainer instance with the image created by build.bash
 # Requires:
-#   docker
+#   apptainer
 #   an X server
 # Optional:
-#   nvidia-docker
+#   NVIDIA support (future)
 #   A joystick mounted to /dev/input/js0 or /dev/input/js1
 
 if [ $# -lt 1 ]
 then
-    echo "Usage: $0 <docker image> [<dir with workspace> ...]"
+    echo "Usage: $0 <apptainer image (.sif)> [<dir with workspace> ...]"
     exit 1
 fi
 
-# Default to NVIDIA
-#DOCKER_OPTS="--runtime=nvidia"
-DOCKER_OPTS="--gpus all -e NVIDIA_DRIVER_CAPABILITIES=all"
+# Default to no NVIDIA (only --no-nvidia supported for now; NVIDIA opts left for future use)
+# TODO: when adding NVIDIA support, populate APPTAINER_OPTS here
+#APPTAINER_OPTS="--nv"  # basic NVIDIA passthrough
+APPTAINER_OPTS=""
+
 # workarounds for MESA/ZINK Vulkan issue
-DOCKER_OPTS="$DOCKER_OPTS -v /usr/share/glvnd/egl_vendor.d/10_nvidia.json:/usr/share/glvnd/egl_vendor.d/10_nvidia.json"
-DOCKER_OPTS="$DOCKER_OPTS -e LIBGL_KOPPER_DISABLE=true -e __GLX_VENDOR_LIBRARY_NAME=nvidia"
-DOCKER_OPTS="$DOCKER_OPTS -e __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.json:/usr/share/glvnd/egl_vendor.d/50_mesa.json"
+# TODO: revisit these bind mounts when adding NVIDIA support
+#APPTAINER_OPTS="$APPTAINER_OPTS --bind /usr/share/glvnd/egl_vendor.d/10_nvidia.json:/usr/share/glvnd/egl_vendor.d/10_nvidia.json"
 
 # Parse and remove args
 PARAMS=""
 while (( "$#" )); do
   case "$1" in
     --no-nvidia)
-        DOCKER_OPTS=""
+        APPTAINER_OPTS=""
       shift
       ;;
     -*|--*=) # unsupported flags
@@ -60,8 +61,6 @@ done
 # set positional arguments in their proper place
 eval set -- "$PARAMS"
 
-#IMG=$(basename $1)
-# Use this for image repos with a slash "/" in the name
 IMG=$1
 
 ARGS=("$@")
@@ -69,7 +68,7 @@ WORKSPACES=("${ARGS[@]:1}")
 
 # Make sure processes in the container can connect to the x server
 # Necessary so gazebo can create a context for OpenGL rendering (even headless)
-XAUTH=/tmp/.docker.xauth
+XAUTH=/tmp/.apptainer.xauth
 if [ ! -f $XAUTH ]
 then
     xauth_list=$(xauth nlist $DISPLAY | sed -e 's/^..../ffff/')
@@ -83,16 +82,18 @@ then
     chmod a+r $XAUTH
 fi
 
+BIND_OPTS=""
+
 # Share your vim settings.
 VIMRC=~/.vimrc
 if [ -f $VIMRC ]
 then
-  DOCKER_OPTS="$DOCKER_OPTS -v $VIMRC:/home/developer/.vimrc:ro"
+  BIND_OPTS="$BIND_OPTS --bind $VIMRC:/home/developer/.vimrc:ro"
 fi
 
 # Share your custom terminal setup commands
 GITCONFIG=~/.gitconfig
-DOCKER_OPTS="$DOCKER_OPTS -v $GITCONFIG:/home/developer/.gitconfig:ro"
+BIND_OPTS="$BIND_OPTS --bind $GITCONFIG:/home/developer/.gitconfig:ro"
 
 for WS_DIR in ${WORKSPACES[@]}
 do
@@ -100,33 +101,38 @@ do
   if [ ! -d $WS_DIR/src ]
   then
     echo "Other! $WS_DIR"
-    DOCKER_OPTS="$DOCKER_OPTS -v $WS_DIR:/home/developer/other/$WS_DIRNAME"
+    BIND_OPTS="$BIND_OPTS --bind $WS_DIR:/home/developer/other/$WS_DIRNAME"
   else
     echo "Workspace! $WS_DIR"
-    DOCKER_OPTS="$DOCKER_OPTS -v $WS_DIR/src:/home/developer/workspaces/src"
+    BIND_OPTS="$BIND_OPTS --bind $WS_DIR/src:/home/developer/workspaces/src"
   fi
 done
 
 mkdir -p $PWD/logs  # for pbloghome
 
-# Mount extra volumes if needed.
-# E.g.:
-# -v "/opt/sublime_text:/opt/sublime_text" \
+# Derive a stable instance name from the image filename
+INSTANCE_NAME=$(basename "$IMG" .sif)
 
-# --ipc=host and --network=host are needed for no-NVIDIA Dockerfile to work
-docker run -it \
-  -e DISPLAY=$DISPLAY \
-  -e QT_X11_NO_MITSHM=1 \
-  -e XAUTHORITY=$XAUTH \
-  -v "$XAUTH:$XAUTH" \
-  -v "/tmp/.X11-unix:/tmp/.X11-unix" \
-  -v "/etc/localtime:/etc/localtime:ro" \
-  -v "/dev:/dev" \
-  -v "$PWD/logs:/logs" \
-  --privileged \
-  --rm \
-  --security-opt seccomp=unconfined \
-  --ipc=host \
-  --network=host \
-  $DOCKER_OPTS \
-  $IMG
+# Stop any pre-existing instance with the same name
+apptainer instance stop "$INSTANCE_NAME" 2>/dev/null || true
+
+apptainer instance start \
+  --writable-tmpfs \
+  --net \
+  --network none \
+  --env DISPLAY=$DISPLAY \
+  --env QT_X11_NO_MITSHM=1 \
+  --env XAUTHORITY=$XAUTH \
+  --env RMW_IMPLEMENTATION=rmw_cyclonedds_cpp \
+  --env GZ_VERSION=harmonic \
+  --bind "$XAUTH:$XAUTH" \
+  --bind "/tmp/.X11-unix:/tmp/.X11-unix" \
+  --bind "/etc/localtime:/etc/localtime:ro" \
+  --bind "/dev:/dev" \
+  --bind "$PWD/logs:/logs" \
+  $BIND_OPTS \
+  $APPTAINER_OPTS \
+  "$IMG" \
+  "$INSTANCE_NAME"
+
+echo "Instance '$INSTANCE_NAME' started. Use join.bash $IMG to attach."

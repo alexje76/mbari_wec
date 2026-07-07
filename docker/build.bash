@@ -17,7 +17,7 @@
 #
 #
 
-# Builds a Docker image.
+# Builds an Apptainer image.
 
 # No arg
 if [ $# -eq 0 ]
@@ -29,15 +29,10 @@ fi
 # Get path to current directory
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Default base image, defined in nvidia_opengl_ubuntu24/Dockerfile
-
-# Ubuntu with nvidia-docker2 beta opengl support, i.e.
-# nvidia/opengl:1.2-glvnd-devel-ubuntu24.04, doesn't exist for Ubuntu 24.04
-# at time of writing. Use homebrewed version in ./nvidia_opengl_ubuntu24/.
-# https://hub.docker.com/r/nvidia/opengl
-base="nvidia_opengl_ubuntu24:latest"
-#base="nvidia/opengl:1.2-glvnd-devel-ubuntu22.04"
-image_suffix="_nvidia"
+# Default base image
+# TODO: replace with NVIDIA-capable public image when adding NVIDIA support
+base="ubuntu:noble"
+image_suffix="_no_nvidia"
 
 # Parse and remove args
 PARAMS=""
@@ -67,18 +62,12 @@ then
   exit 2
 fi
 
-user_id=$(id -u)
 image_name=$(basename $1)
-# Tag as latest so don't have a dozen uniquely timestamped images hanging around
-image_plus_tag=$image_name:latest
+sif_path="$DIR/${image_name}.sif"
 
 echo "Building $image_name with base image $base"
-docker build --rm -t $image_plus_tag --build-arg base=$base --build-arg user_id=$user_id $DIR/$image_name
-echo "Built $image_plus_tag"
-
-# Don't add extra tag if just building the NVIDIA image
-if [[ "$image_name" != nvidia_opengl_ubuntu24 ]]; then
-  # Extra tag in case you have both the NVIDIA and no-NVIDIA images
-  docker tag $image_plus_tag $image_name$image_suffix:latest
-  echo "Tagged as $image_name$image_suffix:latest"
-fi
+apptainer build --fakeroot \
+  --build-arg base=$base \
+  "$sif_path" \
+  "$DIR/$image_name/apptainer.def"
+echo "Built $sif_path"
