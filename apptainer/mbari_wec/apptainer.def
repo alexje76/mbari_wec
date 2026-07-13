@@ -10,13 +10,14 @@ From: {{ base }}
     export GZ_VERSION=harmonic
     export USERNAME=developer
     export MBARI_WEC_WS=/home/developer/mbari_wec_ws
-    export SETUP_SH=/home/developer/setup.bash
-    export RUN_SH=/home/developer/run_simulation.bash
     export LANG=en_US.UTF-8
     export LC_ALL=en_US.UTF-8
-    # Mirror Docker ENTRYPOINT: source workspace setup on every shell entry
-    if [ -f /home/developer/setup.bash ]; then
-        . /home/developer/setup.bash
+
+    if [ -f /opt/ros/jazzy/setup.bash ]; then
+        . /opt/ros/jazzy/setup.bash
+    fi
+    if [ -f /home/developer/mbari_wec_ws/install/setup.bash ]; then
+        . /home/developer/mbari_wec_ws/install/setup.bash
     fi
 
 %post
@@ -111,10 +112,13 @@ From: {{ base }}
     apt-get update
     cd ${MBARI_WEC_WS}
     rosdep init
-    rosdep update
+    rosdep update 
     rosdep install --from-paths src --ignore-src -r -y -i --rosdistro jazzy
     rm -rf /var/lib/apt/lists/*
     apt-get clean
+
+    # Install transforms3d correct version
+    python3 -m pip install transforms3d==0.4.2 --break-system-packages
 
     # Build the project
     /bin/bash -c "source /opt/ros/jazzy/setup.bash \
@@ -142,5 +146,10 @@ From: {{ base }}
     exec sleep infinity
 
 %runscript
-    . /home/developer/setup.bash
+    if [ -f /opt/ros/jazzy/setup.bash ]; then
+        . /opt/ros/jazzy/setup.bash
+    fi
+    if [ -f /home/developer/mbari_wec_ws/install/setup.bash ]; then
+        . /home/developer/mbari_wec_ws/install/setup.bash
+    fi
     exec /bin/bash "$@"
