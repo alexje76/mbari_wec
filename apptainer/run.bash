@@ -1,3 +1,5 @@
+##Likely do not use on HYAK at all
+
 #!/usr/bin/env bash
 
 #
@@ -120,13 +122,8 @@ apptainer instance start \
   --writable-tmpfs \
   --net \
   --network none \
-  --env DISPLAY=$DISPLAY \
-  --env QT_X11_NO_MITSHM=1 \
-  --env XAUTHORITY=$XAUTH \
   --env RMW_IMPLEMENTATION=rmw_cyclonedds_cpp \
   --env GZ_VERSION=harmonic \
-  --bind "$XAUTH:$XAUTH" \
-  --bind "/tmp/.X11-unix:/tmp/.X11-unix" \
   --bind "/etc/localtime:/etc/localtime:ro" \
   --bind "/dev:/dev" \
   --bind "$PWD/logs:/logs" \

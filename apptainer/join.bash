@@ -1,3 +1,5 @@
+ ##likely do not use on hyak at all
+
 #!/usr/bin/env bash
 
 #
@@ -21,8 +23,8 @@
 
 INSTANCE_NAME=$(basename "$1" .sif)
 
-xhost +
-apptainer shell \
-  --env DISPLAY=${DISPLAY} \
+#host +
+apptainer shell \    
   instance://${INSTANCE_NAME}
-xhost -
+  #  --env DISPLAY=${DISPLAY} \ #needs to be added back above if added
+#xhost -
