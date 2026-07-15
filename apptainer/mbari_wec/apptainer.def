@@ -99,7 +99,7 @@ From: {{ base }}
     export MBARI_WEC_WS=/home/developer/mbari_wec_ws
     mkdir -p ${MBARI_WEC_WS}/src
     cd ${MBARI_WEC_WS}/src/
-    wget https://raw.githubusercontent.com/osrf/mbari_wec/main/mbari_wec_all.yaml
+    wget https://raw.githubusercontent.com/alexje76/OpenFiles_MBARIWEC/main/mbari_wec_all.yaml
     cat mbari_wec_all.yaml
 
     cd ${MBARI_WEC_WS}/src
