@@ -8,6 +8,7 @@ From: {{ base }}
     export DEBIAN_FRONTEND=noninteractive
     export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     export GZ_VERSION=harmonic
+    export ROS_DOMAIN_ID=87
     export USERNAME=developer
     export MBARI_WEC_WS=/home/developer/mbari_wec_ws
     export LANG=en_US.UTF-8
